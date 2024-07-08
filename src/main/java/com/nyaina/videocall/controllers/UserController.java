@@ -41,7 +41,6 @@ public class UserController {
     public ResponseEntity<?> save(@RequestBody User user, UriComponentsBuilder builder) {
         try {
             var savedUser = service.save(user);
-            System.out.println(savedUser);
             URI location = builder
                     .path("/user/{id}")
                     .buildAndExpand(savedUser.getId())
