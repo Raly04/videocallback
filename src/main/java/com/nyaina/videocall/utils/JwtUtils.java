@@ -19,7 +19,7 @@ public class JwtUtils {
     @Value("${jwt.secret}")
     private String jwtSecret;
     @Value("${jwt.expire.date}")
-    private int jwtExpirationMs;
+    private Long jwtExpirationMs;
 
     public String extractUserName(String token) {
         return extractClaim (token, Claims::getSubject);
@@ -53,7 +53,7 @@ public class JwtUtils {
                 .claims(extraClaims)
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 20))
+                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getSigningKey(),Jwts.SIG.HS256)
                 .compact();
 
