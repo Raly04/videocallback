@@ -14,6 +14,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -25,10 +26,11 @@ public class UserService {
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final RefreshTokenService refreshTokenService;
 
-    public Map<String,Object> authenticateUser(User user) {
+    public Map<String,Object> authenticateUser(User user) throws IOException {
         Map<String,Object> response = new HashMap<>();
         var arrayResponse = new ArrayList<String>();
-        if(repository.findByUsername(user.getUsername()).isEmpty()) throw new UsernameNotFoundException("User not found");
+        var connectedUser = repository.findByUsername(user.getUsername());
+        if(connectedUser.isEmpty()) throw new UsernameNotFoundException("User not found");
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         arrayResponse.add(jwtUtils.generateToken(userDetails));
@@ -40,10 +42,11 @@ public class UserService {
         } else throw new BadCredentialsException("Incorrect password");
     }
 
-    public User save(User user) {
+    public User save(User user , String avatar) {
         var encryptedPassword = bCryptPasswordEncoder.encode(user.getPassword());
         Set<Group> groups = new HashSet<>();
         return repository.save(User.builder()
+                        .avatar(avatar)
                         .mail(user.getMail())
                         .groups(groups)
                         .password(encryptedPassword)

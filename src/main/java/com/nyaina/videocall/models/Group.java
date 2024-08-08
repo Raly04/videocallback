@@ -19,6 +19,9 @@ public class Group {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(unique = true,nullable = false)
+    private String avatar;
+    @Column(unique = true,nullable = false)
     private String name;
     @ManyToMany
     @JoinTable(

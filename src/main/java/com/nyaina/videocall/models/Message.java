@@ -2,8 +2,10 @@ package com.nyaina.videocall.models;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.proxy.HibernateProxy;
 
+import java.sql.Timestamp;
 import java.util.Objects;
 
 @Entity
@@ -21,6 +23,8 @@ public class Message {
     private String content;
     private String sender;
     private String recipient;
+    @CreationTimestamp
+    private Timestamp date;
 
     @Override
     public final boolean equals(Object o) {

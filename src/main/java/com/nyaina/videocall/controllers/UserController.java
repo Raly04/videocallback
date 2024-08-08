@@ -4,10 +4,16 @@ import com.nyaina.videocall.dtos.JwtRefreshTokenRequest;
 import com.nyaina.videocall.dtos.JwtRefreshTokenResponse;
 import com.nyaina.videocall.models.RefreshToken;
 import com.nyaina.videocall.models.User;
+import com.nyaina.videocall.repositories.UserRepository;
+import com.nyaina.videocall.services.FileService;
 import com.nyaina.videocall.services.RefreshTokenService;
 import com.nyaina.videocall.services.UserService;
 import com.nyaina.videocall.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -16,8 +22,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Path;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,8 +36,11 @@ import java.util.Map;
 public class UserController {
     private final UserService service;
     private final RefreshTokenService refreshTokenService;
+    private final FileService fileService;
     private final JwtUtils jwtUtils;
-    private final Path rootLocation = Paths.get("");
+    private final UserRepository userRepository;
+    @Value("${upload.avatar.dir}")
+    private String uploadDirectory;
 
     @PostMapping("/authenticate")
     public ResponseEntity<?> authenticate(@RequestBody User user) {
@@ -40,11 +50,11 @@ public class UserController {
         try {
             return ResponseEntity.ok(service.authenticateUser(user));
         } catch (BadCredentialsException e) {
-            arrayResponse.add( "Incorrect password");
-            response.put("content",arrayResponse);
+            arrayResponse.add("Incorrect password");
+            response.put("content", arrayResponse);
             return ResponseEntity.ok(response);
         } catch (UsernameNotFoundException e) {
-            arrayResponse.add( "Username not found");
+            arrayResponse.add("Username not found");
             response.put("content", arrayResponse);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -55,11 +65,8 @@ public class UserController {
     @PostMapping("/create")
     public ResponseEntity<?> save(@RequestBody User user, UriComponentsBuilder builder) {
         try {
-            var savedUser = service.save(user);
-            URI location = builder
-                    .path("/user/{id}")
-                    .buildAndExpand(savedUser.getId())
-                    .toUri();
+            var savedUser = service.save(user, "default.jpg");
+            URI location = builder.path("/user/{id}").buildAndExpand(savedUser.getId()).toUri();
             return ResponseEntity.created(location).body(savedUser);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(e.getMessage());
@@ -77,41 +84,69 @@ public class UserController {
     }
 
     @GetMapping("/getAll")
-    public ResponseEntity<?> getAll(){
+    public ResponseEntity<?> getAll() {
         try {
             return ResponseEntity.ok(service.getAll());
-        } catch (Exception e){ 
+        } catch (Exception e) {
             return ResponseEntity.internalServerError().body(e.getMessage());
         }
     }
 
     @PostMapping("/refreshToken")
-    public ResponseEntity<?> refreshToken(@RequestBody JwtRefreshTokenRequest request){
+    public ResponseEntity<?> refreshToken(@RequestBody JwtRefreshTokenRequest request) {
         String refreshToken = request.getToken();
-        System.out.println("RefreshToken : "+refreshToken);
-        return refreshTokenService.findByToken(refreshToken)
-                .map(refreshTokenService::verifyExpiration)
-                .map(RefreshToken::getUser)
-                .map(user -> {
-                    return ResponseEntity.ok(JwtRefreshTokenResponse.builder()
-                            .accessToken(jwtUtils.generateToken(user))
-                            .refreshToken(refreshToken)
-                            .build());
-                }).orElseThrow(() ->new RuntimeException("Refresh Token is not in DB..!!"));
+        System.out.println("RefreshToken : " + refreshToken);
+        return refreshTokenService.findByToken(refreshToken).map(refreshTokenService::verifyExpiration).map(RefreshToken::getUser).map(user -> {
+            return ResponseEntity.ok(JwtRefreshTokenResponse.builder().accessToken(jwtUtils.generateToken(user)).refreshToken(refreshToken).build());
+        }).orElseThrow(() -> new RuntimeException("Refresh Token is not in DB..!!"));
     }
 
     @PostMapping("/saveFile")
-    public ResponseEntity<?> saveFile(@RequestBody MultipartFile file) {
-        System.out.println(rootLocation);
-        return ResponseEntity.ok("HAHAHA");
+    public ResponseEntity<?> saveFile(@RequestParam("userId") String userId, @RequestParam("avatar") MultipartFile avatar) {
+        try {
+            fileService.saveImageToStorage(uploadDirectory, avatar);
+            return ResponseEntity.ok("File is saved successfully");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
     }
 
     @GetMapping("/findById/{id}")
-    public ResponseEntity<?> findById(@PathVariable Long id){
-        try{
+    public ResponseEntity<?> findById(@PathVariable Long id) {
+        try {
             return ResponseEntity.ok(service.findById(id));
-        }catch (UsernameNotFoundException e){
+        } catch (UsernameNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping("/avatar/{userId}")
+    public ResponseEntity<Resource> getUserAvatar(@PathVariable Long userId) throws IOException {
+        // Fetch the user from the repository
+        User user = userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        // Get the avatar filename from the user entity
+        String avatarFilename = user.getAvatar();
+
+        // Use the fileService to load the image as a Resource
+        Resource avatarResource = fileService.getImage(avatarFilename);
+
+        // Determine the content type dynamically
+        String contentType;
+        try {
+            // Determine the content type of the file
+            contentType = Files.probeContentType(Paths.get(avatarResource.getURI()));
+            if (contentType == null) {
+                contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE; // Default if unknown
+            }
+        } catch (IOException ex) {
+            throw new IOException("Could not determine file type.", ex);
+        }
+
+        // Return the image as a ResponseEntity with the correct content type
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + user.getUsername() + "-avatar\"")
+                .body(avatarResource);
     }
 }
