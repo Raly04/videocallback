@@ -54,6 +54,14 @@ public class UserService {
                 .build());
     }
 
+    public void update(User user){
+        repository.save(user);
+    }
+
+    public Set<User> getContacts(Long id){
+        return repository.findById(id).orElseThrow(()->new UsernameNotFoundException("User not found")).getContacts();
+    }
+
     public void deleteById(Long id) {
         repository.deleteById(id);
     }

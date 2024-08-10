@@ -1,5 +1,6 @@
 package com.nyaina.videocall.controllers;
 
+import com.nyaina.videocall.dtos.AvatarUploadDTOResponse;
 import com.nyaina.videocall.dtos.JwtRefreshTokenRequest;
 import com.nyaina.videocall.dtos.JwtRefreshTokenResponse;
 import com.nyaina.videocall.models.RefreshToken;
@@ -39,6 +40,7 @@ public class UserController {
     private final FileService fileService;
     private final JwtUtils jwtUtils;
     private final UserRepository userRepository;
+    private final UserService userService;
     @Value("${upload.avatar.dir}")
     private String uploadDirectory;
 
@@ -92,6 +94,15 @@ public class UserController {
         }
     }
 
+    @GetMapping("/contacts/{id}")
+    public ResponseEntity<?> getContacts(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(service.getContacts(id));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
+
     @PostMapping("/refreshToken")
     public ResponseEntity<?> refreshToken(@RequestBody JwtRefreshTokenRequest request) {
         String refreshToken = request.getToken();
@@ -101,11 +112,19 @@ public class UserController {
         }).orElseThrow(() -> new RuntimeException("Refresh Token is not in DB..!!"));
     }
 
-    @PostMapping("/saveFile")
+    @PostMapping("/uploadUserAvatar")
     public ResponseEntity<?> saveFile(@RequestParam("userId") String userId, @RequestParam("avatar") MultipartFile avatar) {
         try {
-            fileService.saveImageToStorage(uploadDirectory, avatar);
-            return ResponseEntity.ok("File is saved successfully");
+            //find user by id
+            var user = userService.findById(Long.valueOf(userId));
+            //save into storage
+            var uuid = fileService.saveImageToStorage(uploadDirectory, avatar);
+            //delete old avatar if exists
+            fileService.deleteImage(user.getAvatar());
+            user.setAvatar(uuid + "_" + avatar.getOriginalFilename());
+            //update user with new avatar
+            userService.update(user);
+            return ResponseEntity.ok(AvatarUploadDTOResponse.builder().content("File is saved successfully").build());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(e.getMessage());
         }
@@ -118,6 +137,11 @@ public class UserController {
         } catch (UsernameNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @PostMapping("/uploadTest")
+    public ResponseEntity<?> uploadTest() throws IOException {
+        return ResponseEntity.ok("You can continue");
     }
 
     @GetMapping("/avatar/{userId}")
@@ -144,9 +168,6 @@ public class UserController {
         }
 
         // Return the image as a ResponseEntity with the correct content type
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + user.getUsername() + "-avatar\"")
-                .body(avatarResource);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(contentType)).header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + user.getUsername() + "-avatar\"").body(avatarResource);
     }
 }

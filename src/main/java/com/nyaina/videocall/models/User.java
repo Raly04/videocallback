@@ -41,9 +41,35 @@ public class User implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return null;
     }
+    @ManyToMany
+    @JoinTable(
+            name = "user_contacts",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "contact_id")
+    )
+    @ToString.Exclude
+    private Set<User> contacts;
     @ManyToMany(mappedBy = "users")
     @ToString.Exclude
     private Set<Group> groups;
+
+    public void addGroup(Group group){
+        this.groups.add(group);
+    }
+
+    public void removeGroup(Group group){
+        this.groups.remove(group);
+    }
+
+    public void addContact(User contact) {
+        this.contacts.add(contact);
+        contact.getContacts().add(this);
+    }
+
+    public void removeContact(User contact) {
+        this.contacts.remove(contact);
+        contact.getContacts().remove(this);
+    }
 
     @Override
     public String getPassword() {

@@ -17,7 +17,8 @@ public class FileService {
 
     // Save image in a local directory
     public String saveImageToStorage(String uploadDirectory, MultipartFile imageFile) throws IOException {
-        String uniqueFileName = UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
+        String uuid = String.valueOf(UUID.randomUUID());
+        String uniqueFileName = uuid + "_" + imageFile.getOriginalFilename();
 
         Path uploadPath = Path.of(uploadDirectory);
         Path filePath = uploadPath.resolve(uniqueFileName);
@@ -28,7 +29,7 @@ public class FileService {
 
         Files.copy(imageFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-        return uniqueFileName;
+        return uuid;
     }
 
     // To view an image
@@ -43,8 +44,8 @@ public class FileService {
     }
 
     // Delete an image
-    public String deleteImage(String imageDirectory, String imageName) throws IOException {
-        Path imagePath = Path.of(imageDirectory, imageName);
+    public String deleteImage(String imageName) throws IOException {
+        Path imagePath = Path.of(uploadUserAvatarDirectory, imageName);
 
         if (Files.exists(imagePath)) {
             Files.delete(imagePath);
