@@ -1,44 +1,26 @@
 package com.nyaina.videocall.models;
 
+import com.nyaina.videocall.enums.MessageType;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.proxy.HibernateProxy;
 
 import java.sql.Timestamp;
-import java.util.Objects;
 
 @Entity
-@Table(name = "messages")
-@Builder
-@Getter
-@Setter
-@ToString
-@NoArgsConstructor
-@AllArgsConstructor
-public class Message {
+@Data
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+public abstract class Message {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     private String content;
-    private String sender;
-    private String recipient;
+    @ManyToOne
+    @JoinColumn(name = "sender_id")
+    private User sender;
     @CreationTimestamp
     private Timestamp date;
-
-    @Override
-    public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null) return false;
-        Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
-        Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass) return false;
-        Message message = (Message) o;
-        return getId() != null && Objects.equals(getId(), message.getId());
-    }
-
-    @Override
-    public final int hashCode() {
-        return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
-    }
+    @Enumerated(EnumType.STRING)
+    private MessageType type;
+    // Getters and setters
 }

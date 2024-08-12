@@ -1,7 +1,8 @@
 package com.nyaina.videocall.controllers;
 
 import com.nyaina.videocall.dtos.HistoryRequest;
-import com.nyaina.videocall.models.Message;
+import com.nyaina.videocall.models.MessageToGroup;
+import com.nyaina.videocall.models.MessageToUser;
 import com.nyaina.videocall.services.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,17 +19,23 @@ public class MessageController {
     private final MessageService messageService;
     private final SimpMessagingTemplate simpMessagingTemplate;
 
-    @MessageMapping("/send")
-    public void sendMessage(@Payload Message message) {
+    @MessageMapping("/sendToUser")
+    public void sendMessage(@Payload MessageToUser message) {
         try {
-            if (message.getRecipient().startsWith("group:")) {
-                // Send to group
-                simpMessagingTemplate.convertAndSend("/topic/groups/" + message.getRecipient().substring(6), message);
-            } else {
-                // Send to individual user
-                simpMessagingTemplate.convertAndSend("/queue/"+message.getRecipient(), message);
-                System.out.println("SEND TO :"+message.getRecipient()+ "/queue/messages" + message.getContent());
-            }
+            System.out.println("MESSAGE : "+message.getSender().getId());
+            // Send to individual user
+            simpMessagingTemplate.convertAndSend("/queue/" + message.getReceiver().getId(), message);
+            messageService.save(message);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @MessageMapping("/sendToGroup")
+    public void sendMessage(@Payload MessageToGroup message) {
+        try {
+            // Send to group
+            simpMessagingTemplate.convertAndSend("/topic/groups/" + message.getReceiver().getId(), message);
             messageService.save(message);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -37,9 +44,9 @@ public class MessageController {
 
     @PostMapping("/message/getHistoryBetweenTwoUser")
     public ResponseEntity<?> getHistory(@RequestBody HistoryRequest request) {
-        try{
-            return ResponseEntity.ok(messageService.getHistory(request.getFrom(), request.getTo()));
-        }catch (Exception e){
+        try {
+            return ResponseEntity.ok(messageService.getHistoryBetweenUser(request.getFrom(), request.getTo()));
+        } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
     }
