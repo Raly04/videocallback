@@ -67,4 +67,11 @@ public class UserService {
     public User findById(Long id) {
         return repository.findById(id).orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
+
+    public User addContact(Long userId , Long friendId) {
+        User user = repository.findById(userId).orElseThrow(()-> new UsernameNotFoundException("User not found"));
+        User friend = repository.findById(friendId).orElseThrow(()-> new UsernameNotFoundException("Friend not found"));
+        user.addContact(friend);
+        return repository.save(user);
+    }
 }

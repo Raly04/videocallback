@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import com.fasterxml.jackson.annotation.*;
 
 import java.sql.Timestamp;
 import java.util.Collection;
@@ -21,6 +22,10 @@ import java.util.Set;
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIdentityInfo(
+    generator = ObjectIdGenerators.PropertyGenerator.class,
+    property = "id"
+)
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,6 +46,7 @@ public class User implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return null;
     }
+    @JsonIdentityReference(alwaysAsId = true)
     @ManyToMany
     @JoinTable(
             name = "user_contacts",
@@ -49,6 +55,7 @@ public class User implements UserDetails {
     )
     @ToString.Exclude
     private Set<User> contacts;
+    @JsonIdentityReference(alwaysAsId = true)
     @ManyToMany(mappedBy = "users")
     @ToString.Exclude
     private Set<Group> groups;

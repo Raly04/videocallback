@@ -41,7 +41,7 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/ws/**").permitAll()
-                        .requestMatchers("/user/authenticate","/user/refreshToken","user/create").permitAll()
+                        .requestMatchers("/user/authenticate","/user/refreshToken","user/create","user/avatar/*").permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults())

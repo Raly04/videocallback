@@ -144,6 +144,15 @@ public class UserController {
         return ResponseEntity.ok("You can continue");
     }
 
+    @GetMapping("/addContact/{userId}/{friendId}")
+    public ResponseEntity<?> addContact(@PathVariable Long userId, @PathVariable Long friendId) {
+        try {
+            return ResponseEntity.ok(service.addContact(userId, friendId));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/avatar/{userId}")
     public ResponseEntity<Resource> getUserAvatar(@PathVariable Long userId) throws IOException {
         // Fetch the user from the repository
