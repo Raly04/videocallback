@@ -4,6 +4,8 @@ import com.nyaina.videocall.models.Group;
 import com.nyaina.videocall.models.User;
 import com.nyaina.videocall.repositories.UserRepository;
 import com.nyaina.videocall.utils.JwtUtils;
+import java.io.IOException;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -14,12 +16,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.util.*;
-
 @RequiredArgsConstructor
 @Service
 public class UserService {
+
     private final AuthenticationManager authenticationManager;
     private final UserRepository repository;
     private final JwtUtils jwtUtils;
@@ -30,12 +30,28 @@ public class UserService {
         Map<String, Object> response = new HashMap<>();
         var arrayResponse = new ArrayList<String>();
         var connectedUser = repository.findByUsername(user.getUsername());
-        if (connectedUser.isEmpty()) throw new UsernameNotFoundException("User not found");
-        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
+        if (connectedUser.isEmpty()) throw new UsernameNotFoundException(
+            "User not found"
+        );
+        Authentication authentication = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                user.getUsername(),
+                user.getPassword()
+            )
+        );
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         arrayResponse.add(jwtUtils.generateToken(userDetails));
-        arrayResponse.add(refreshTokenService.createRefreshToken(userDetails.getUsername()).getToken());
-        if (bCryptPasswordEncoder.matches(user.getPassword(), userDetails.getPassword())) {
+        arrayResponse.add(
+            refreshTokenService
+                .createRefreshToken(userDetails.getUsername())
+                .getToken()
+        );
+        if (
+            bCryptPasswordEncoder.matches(
+                user.getPassword(),
+                userDetails.getPassword()
+            )
+        ) {
             response.put("content", arrayResponse);
             response.put("user", userDetails);
             return response;
@@ -43,9 +59,19 @@ public class UserService {
     }
 
     public User save(User user, String avatar) {
-        var encryptedPassword = bCryptPasswordEncoder.encode(user.getPassword());
+        var encryptedPassword = bCryptPasswordEncoder.encode(
+            user.getPassword()
+        );
         Set<Group> groups = new HashSet<>();
-        return repository.save(User.builder().avatar(avatar).mail(user.getMail()).groups(groups).password(encryptedPassword).username(user.getUsername()).build());
+        return repository.save(
+            User.builder()
+                .avatar(avatar)
+                .mail(user.getMail())
+                .groups(groups)
+                .password(encryptedPassword)
+                .username(user.getUsername())
+                .build()
+        );
     }
 
     public void update(User user) {
@@ -53,7 +79,10 @@ public class UserService {
     }
 
     public Set<User> getContacts(Long id) {
-        return repository.findById(id).orElseThrow(() -> new UsernameNotFoundException("User not found")).getContacts();
+        return repository
+            .findById(id)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"))
+            .getContacts();
     }
 
     public void deleteById(Long id) {
@@ -64,13 +93,30 @@ public class UserService {
         return repository.findAll();
     }
 
-    public User findById(Long id) {
-        return repository.findById(id).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    public List<User> getAllUsersWithoutContacts(Long id) {
+        User user = repository
+            .findById(id)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Set<User> contacts = user.getContacts();
+        List<User> allUsers = repository.findAll();
+        allUsers.removeAll(contacts);
+        return allUsers;
     }
 
-    public User addContact(Long userId , Long friendId) {
-        User user = repository.findById(userId).orElseThrow(()-> new UsernameNotFoundException("User not found"));
-        User friend = repository.findById(friendId).orElseThrow(()-> new UsernameNotFoundException("Friend not found"));
+    public User findById(Long id) {
+        return repository
+            .findById(id)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    }
+
+    public User addContact(Long userId, Long friendId) {
+        User user = repository
+            .findById(userId)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        User friend = repository
+            .findById(friendId)
+            .orElseThrow(() -> new UsernameNotFoundException("Friend not found")
+            );
         user.addContact(friend);
         return repository.save(user);
     }
