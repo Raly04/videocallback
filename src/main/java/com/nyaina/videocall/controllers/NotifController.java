@@ -1,13 +1,7 @@
 package com.nyaina.videocall.controllers;
 
-import com.nyaina.videocall.enums.NotifType;
-import com.nyaina.videocall.models.FriendRequestNotif;
-import com.nyaina.videocall.models.Notif;
-import com.nyaina.videocall.models.User;
-import com.nyaina.videocall.services.NotifService;
-import com.nyaina.videocall.services.UserService;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -16,9 +10,19 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import com.nyaina.videocall.enums.NotifType;
+import com.nyaina.videocall.models.FriendRequestNotif;
+import com.nyaina.videocall.models.Notif;
+import com.nyaina.videocall.models.User;
+import com.nyaina.videocall.services.NotifService;
+import com.nyaina.videocall.services.UserService;
+
+import lombok.RequiredArgsConstructor;
+
 @Controller
 @RequiredArgsConstructor
 public class NotifController {
+
     private final NotifService notifService;
     private final UserService userService;
     private final SimpMessagingTemplate simpMessagingTemplate;
