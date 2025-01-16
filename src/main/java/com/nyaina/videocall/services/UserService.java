@@ -1,12 +1,13 @@
 package com.nyaina.videocall.services;
 
-import com.nyaina.videocall.models.Group;
-import com.nyaina.videocall.models.User;
-import com.nyaina.videocall.repositories.UserRepository;
-import com.nyaina.videocall.utils.JwtUtils;
 import java.io.IOException;
-import java.util.*;
-import lombok.RequiredArgsConstructor;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,6 +16,16 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import com.nyaina.videocall.enums.NotifType;
+import com.nyaina.videocall.models.FriendRequestNotif;
+import com.nyaina.videocall.models.Group;
+import com.nyaina.videocall.models.User;
+import com.nyaina.videocall.repositories.FriendRequestNotifRepository;
+import com.nyaina.videocall.repositories.UserRepository;
+import com.nyaina.videocall.utils.JwtUtils;
+
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Service
@@ -25,53 +36,47 @@ public class UserService {
     private final JwtUtils jwtUtils;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final FriendRequestNotifRepository friendRequestNotifRepository;
 
     public Map<String, Object> authenticateUser(User user) throws IOException {
         Map<String, Object> response = new HashMap<>();
         var arrayResponse = new ArrayList<String>();
         var connectedUser = repository.findByUsername(user.getUsername());
-        if (connectedUser.isEmpty()) throw new UsernameNotFoundException(
-            "User not found"
-        );
+        if (connectedUser.isEmpty())
+            throw new UsernameNotFoundException(
+                    "User not found");
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                user.getUsername(),
-                user.getPassword()
-            )
-        );
+                new UsernamePasswordAuthenticationToken(
+                        user.getUsername(),
+                        user.getPassword()));
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         arrayResponse.add(jwtUtils.generateToken(userDetails));
         arrayResponse.add(
-            refreshTokenService
-                .createRefreshToken(userDetails.getUsername())
-                .getToken()
-        );
-        if (
-            bCryptPasswordEncoder.matches(
+                refreshTokenService
+                        .createRefreshToken(userDetails.getUsername())
+                        .getToken());
+        if (bCryptPasswordEncoder.matches(
                 user.getPassword(),
-                userDetails.getPassword()
-            )
-        ) {
+                userDetails.getPassword())) {
             response.put("content", arrayResponse);
             response.put("user", userDetails);
             return response;
-        } else throw new BadCredentialsException("Incorrect password");
+        } else
+            throw new BadCredentialsException("Incorrect password");
     }
 
     public User save(User user, String avatar) {
         var encryptedPassword = bCryptPasswordEncoder.encode(
-            user.getPassword()
-        );
+                user.getPassword());
         Set<Group> groups = new HashSet<>();
         return repository.save(
-            User.builder()
-                .avatar(avatar)
-                .mail(user.getMail())
-                .groups(groups)
-                .password(encryptedPassword)
-                .username(user.getUsername())
-                .build()
-        );
+                User.builder()
+                        .avatar(avatar)
+                        .mail(user.getMail())
+                        .groups(groups)
+                        .password(encryptedPassword)
+                        .username(user.getUsername())
+                        .build());
     }
 
     public void update(User user) {
@@ -80,9 +85,9 @@ public class UserService {
 
     public Set<User> getContacts(Long id) {
         return repository
-            .findById(id)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found"))
-            .getContacts();
+                .findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"))
+                .getContacts();
     }
 
     public void deleteById(Long id) {
@@ -95,8 +100,8 @@ public class UserService {
 
     public List<User> getAllUsersWithoutContacts(Long id) {
         User user = repository
-            .findById(id)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Set<User> contacts = user.getContacts();
         List<User> allUsers = repository.findAll();
         allUsers.removeAll(contacts);
@@ -105,19 +110,24 @@ public class UserService {
 
     public User findById(Long id) {
         return repository
-            .findById(id)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
     public User addContact(Long userId, Long friendId) {
         User user = repository
-            .findById(userId)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         User friend = repository
-            .findById(friendId)
-            .orElseThrow(() -> new UsernameNotFoundException("Friend not found")
-            );
+                .findById(friendId)
+                .orElseThrow(() -> new UsernameNotFoundException("Friend not found"));
         user.addContact(friend);
+        FriendRequestNotif notif = friendRequestNotifRepository
+                .findBySenderAndReceiverAndType(friend, user, NotifType.FRIEND_REQUEST)
+                .orElseThrow(() -> new UsernameNotFoundException("Notification not found"));
+        notif.setAccepted(true);
+        notif.setSeen(true);
+        friendRequestNotifRepository.save(notif);
         return repository.save(user);
     }
 }

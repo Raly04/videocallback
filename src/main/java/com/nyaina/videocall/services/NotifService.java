@@ -1,23 +1,22 @@
 package com.nyaina.videocall.services;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.nyaina.videocall.enums.NotifType;
 import com.nyaina.videocall.models.FriendRequestNotif;
 import com.nyaina.videocall.models.Notif;
 import com.nyaina.videocall.models.User;
 import com.nyaina.videocall.repositories.FriendRequestNotifRepository;
-import com.nyaina.videocall.repositories.GroupRepository;
-import com.nyaina.videocall.repositories.UserRepository;
-import java.util.List;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class NotifService {
 
     private final FriendRequestNotifRepository friendRequestNotifRepository;
-    private final UserRepository userRepository;
-    private final GroupRepository groupRepository;
 
     public Boolean existsBySenderAndReceiverAndType(
         User sender,
@@ -31,8 +30,8 @@ public class NotifService {
         );
     }
 
-    public List<Notif> findByReceiver(User receiver) {
-        return friendRequestNotifRepository.findByReceiver(receiver);
+    public List<Notif> findByUser(User user) {
+        return friendRequestNotifRepository.findByReceiver(user);
     }
 
     public Notif save(Notif notif) {

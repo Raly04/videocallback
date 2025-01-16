@@ -30,8 +30,8 @@ public class NotifController {
     @GetMapping("/notif/getByReceiver/{id}")
     public ResponseEntity<?> getNotifByReceiverId(@PathVariable Long id) {
         try {
-            User receiver = userService.findById(id);
-            List<Notif> notifs = notifService.findByReceiver(receiver);
+            User user = userService.findById(id);
+            List<Notif> notifs = notifService.findByUser(user);
             return ResponseEntity.ok(notifs);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

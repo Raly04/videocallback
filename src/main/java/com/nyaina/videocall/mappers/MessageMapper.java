@@ -37,6 +37,7 @@ public class MessageMapper {
         MessageToUserDTO dto = new MessageToUserDTO();
         dto.setId(entity.getId());
         dto.setContent(entity.getContent());
+        dto.setDate(entity.getDate());
         dto.setType(entity.getType());
         
         if (entity.getSender() != null) {
